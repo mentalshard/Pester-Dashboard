@@ -14,11 +14,11 @@ My implementation of this vision uses extensive use of the Cache Provider built 
 
 ## Roadmap
 ### Minor Features
-- [] Complete building the pester test page (currently only roughed in)
-- [] Breadcrumbs for directory and test pages
-- [] Update grid content with graphical status elements
+- [ ] Complete building the pester test page (currently only roughed in)
+- [ ] Breadcrumbs for directory and test pages
+- [ ] Update grid content with graphical status elements
 
 ### Major Features
-- [] Allow multiple starting directories
-- [] Take input from pester tests directly (without requiring a .xml file)
-- [] Ability to refresh individual page cache
+- [ ] Allow multiple starting directories
+- [ ] Take input from pester tests directly (without requiring a .xml file)
+- [ ] Ability to refresh individual page cache
