@@ -1,7 +1,3 @@
-$HomePage = . (Join-Path $PSScriptRoot "pages\home.ps1")
-$FilePage = . (Join-Path $PSScriptRoot "pages\FilePage.ps1")
-$DirectoryPage = . (Join-Path $PSScriptRoot "pages\DirectoryPage.ps1")
-
 $Endpoints = @()
 $Schedule = New-UDEndpointSchedule -Every 1 -Minute
 
@@ -159,15 +155,12 @@ Function New-UDTestObject {
             }
         }
     }
-    $rowGUID = New-Guid
+    $rowGUID = (New-Guid).Guid
     New-UDRow -Id $rowGUID {
-        #$cache:hash = @{}
         Foreach ($t in $xml.'test-results'.'test-suite'.results.'test-suite'){
-            #$cache:hash.add($t.name,$t)
             New-UDCard -Content {
                 New-UDCollapsible -Items {
-                    $title = $t.name
-                    New-UDCollapsibleItem -Title $title -Icon check -Content {
+                    New-UDCollapsibleItem -Title $($t.name) -Icon crosshairs -Content {
                         New-UDStaticTable -Headers @('Test Name','Status') -Title ' ' -Content {
                             $t.results.'test-case' | Select-Object description, result | Out-UDTableData -Property @('description','result')
                         }
@@ -239,7 +232,11 @@ $Endpoints += $GetFiles
 
 $EndpointInitialization = New-UDEndpointInitialization -Function @('New-UDStaticTable','New-UDTestObject','Get-Directories','Get-XMLtoCache') 
 
-$pages = @($HomePage, $DirectoryPage, $FilePage)
-$Dashboard = New-UDDashboard -Title "Pester Test $path" -Pages $pages -EndpointInitialization $EndpointInitialization
-Get-UDdashboard -Name MasterDash | Stop-UDDashboard  
-Start-UDDashboard -Port 1001 -Dashboard $Dashboard -Name MasterDash -AutoReload -Endpoint $Endpoints
+$HomePage = . (Join-Path $PSScriptRoot "pages\home.ps1")
+$FilePage = . (Join-Path $PSScriptRoot "pages\FilePage.ps1")
+$DirectoryPage = . (Join-Path $PSScriptRoot "pages\DirectoryPage.ps1")
+
+$Pages = @($HomePage, $DirectoryPage, $FilePage)
+$Dashboard = New-UDDashboard -Title "Pester Test $path" -Pages $Pages -EndpointInitialization $EndpointInitialization
+Get-UDdashboard -Name PesterDashboard | Stop-UDDashboard  
+Start-UDDashboard -Port 1001 -Dashboard $Dashboard -Name PesterDashboard -AutoReload -Endpoint $Endpoints
