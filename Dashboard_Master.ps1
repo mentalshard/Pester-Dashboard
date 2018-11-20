@@ -2,19 +2,17 @@ $HomePage = . (Join-Path $PSScriptRoot "pages\home.ps1")
 $FilePage = . (Join-Path $PSScriptRoot "pages\FilePage.ps1")
 $DirectoryPage = . (Join-Path $PSScriptRoot "pages\DirectoryPage.ps1")
 
-#$path = '.\test.xml'
-#[xml]$xml = Get-Content -path $path
 $Endpoints = @()
-
-
 $Schedule = New-UDEndpointSchedule -Every 1 -Minute
-$pages = @($HomePage, $DirectoryPage, $FilePage)
 
+# Set Configuration and initialize Cache Variables
 $Cache:PesterFolder = '.\pester test dir\'
-$Cache:SiteURL = 'http://localhost:1001/'
+$Cache:SiteURL = 'http://localhost:1001'
 $Cache:Filenames = @{}
 $Cache:PageContent = @{}
 $Cache:Directories = @{}
+
+# Setup Functions
 Function New-UDStaticTable {
     param(
     [Parameter()]
@@ -173,14 +171,16 @@ Function New-UDTestObject {
                         New-UDStaticTable -Headers @('Test Name','Status') -Title ' ' -Content {
                             $t.results.'test-case' | Select-Object description, result | Out-UDTableData -Property @('description','result')
                         }
+                        #Need to modify New-UDgrid to accept content instead of just endpoint.
+                        <#New-UDGrid -Title $Title -Headers @('Test Name','Status') -Property @('description','result') -Endpoint {
+                            $t.results.'test-case' | Select-Object description, result | Out-UDGridData
+                        }#>
                     }
                 }
             }
         } 
     }
 }
-
-
 
 Function Get-XMLtoCache {
     Param (
@@ -204,11 +204,11 @@ Function Get-XMLtoCache {
             FixtureCount = $xml.'test-results'.total
             }
         ))
-        
         $Cache:PageContent.Add($($url+$Filename),(New-UDTestObject -XML $xml))
 
     }
 }
+
 Function Get-Directories {
     Param ($Path, $ParentID)
     Foreach ($Directory in  (Get-ChildItem -path $Path -Directory)){
@@ -219,7 +219,7 @@ Function Get-Directories {
                 Parent = $Directory.Parent.Name;
                 DirID = $dirID;
                 ParentID = $ParentID;
-                Children = If (Get-ChildItem -Path $Directory.FullName -Directory){$true};
+                Children = $(Get-ChildItem -Path $Directory.FullName -Directory).count;
                 Tests = If (Get-ChildItem -Path $Directory.FullName -Filter "*.xml"){$true};
             }
         ))
@@ -230,13 +230,16 @@ Function Get-Directories {
     }
 }
 
+
 $GetFiles = New-UDEndpoint -Schedule $Schedule -Endpoint {
     Get-Directories -Path $Cache:PesterFolder -ParentID $Cache:PesterFolder
 }
 
 $Endpoints += $GetFiles
-$ei = New-UDEndpointInitialization -Function @('New-UDStaticTable','New-UDTestObject') 
 
-$Dashboard = New-UDDashboard -Title "Pester Test $path" -Pages $pages -EndpointInitialization $ei 
+$EndpointInitialization = New-UDEndpointInitialization -Function @('New-UDStaticTable','New-UDTestObject','Get-Directories','Get-XMLtoCache') 
+
+$pages = @($HomePage, $DirectoryPage, $FilePage)
+$Dashboard = New-UDDashboard -Title "Pester Test $path" -Pages $pages -EndpointInitialization $EndpointInitialization
 Get-UDdashboard -Name MasterDash | Stop-UDDashboard  
 Start-UDDashboard -Port 1001 -Dashboard $Dashboard -Name MasterDash -AutoReload -Endpoint $Endpoints
