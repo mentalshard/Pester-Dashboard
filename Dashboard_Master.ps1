@@ -7,71 +7,13 @@ $Cache:SiteURL = 'http://localhost:1001'
 $Cache:Filenames = @{}
 $Cache:PageContent = @{}
 $Cache:Directories = @{}
+$Cache:TestResults = @{}
+$Cache:TestGridData = @{}
 
 # Setup Functions
-Function New-UDStaticTable {
-    param(
-    [Parameter()]
-    [string]$Id = (New-Guid),
-    [Parameter()]
-    [string]$Title,
-    [Parameter(Mandatory = $true)]
-    [string[]]$Headers,
-    [Parameter()]
-    [UniversalDashboard.Models.DashboardColor]$BackgroundColor,
-    [Parameter()]
-    [UniversalDashboard.Models.DashboardColor]$FontColor,
-    [Parameter()]
-    [ValidateSet("bordered", "striped", "highlight", "centered", "responsive-table")]
-    [string]$Style,        
-    [Parameter(ParameterSetName = 'content')]
-    [ScriptBlock]$Content,
-    [Parameter()]
-    [UniversalDashboard.Models.Link[]] $Links,
-    [Parameter()]
-    [Switch]$AutoRefresh,
-    [Parameter()]
-    [int]$RefreshInterval = 5
-    )
-    
-    $Actions = $null
-    if ($Links -ne $null) {
-        $Actions = New-UDElement -Tag 'div' -Content {
-            $Links
-        } -Attributes @{
-            className = 'card-action'
-        }
-    }
-    
-    New-UDElement -Tag "div" -Id $Id -Attributes @{
-        className = 'card ud-table' 
-        style = @{
-            backgroundColor = $BackgroundColor.HtmlColor
-            color = $FontColor.HtmlColor
-        }
-    } -Content {
-        New-UDElement -Tag "div" -Attributes @{
-            className = 'card-content'
-        } -Content {
-            New-UDElement -Tag 'span' -Content { $Title }
-            New-UDElement -Tag 'table' -Content {
-                New-UDElement -Tag 'thead' -Content {
-                    New-UDElement -Tag 'tr' -Content {
-                        foreach($header in $Headers) {
-                            New-UDElement -Tag 'th' -Content { $header }
-                        }
-                    }
-                }
-                New-UDElement -Tag 'tbody' -Content {$Content.Invoke()}
-            } -Attributes @{ className = $Style }
-        }
-        $Actions
-    }
-}
-
-Function New-UDTestObject {
+Function Add-TestStaticCharts {
     Param (
-    $xml
+        $xml
     )
     New-UDRow {
         # Fixture summary (pass/fail/inconclusive) (Doughnut)
@@ -155,27 +97,18 @@ Function New-UDTestObject {
             }
         }
     }
-    $rowGUID = (New-Guid).Guid
-    New-UDRow -Id $rowGUID {
-        Foreach ($t in $xml.'test-results'.'test-suite'.results.'test-suite'){
-            New-UDCard -Content {
-                New-UDCollapsible -Items {
-                    New-UDCollapsibleItem -Title $($t.name) -Icon crosshairs -Content {
-                        New-UDStaticTable -Headers @('Test Name','Status') -Title ' ' -Content {
-                            $t.results.'test-case' | Select-Object description, result | Out-UDTableData -Property @('description','result')
-                        }
-                        #Need to modify New-UDgrid to accept content instead of just endpoint.
-                        <#New-UDGrid -Title $Title -Headers @('Test Name','Status') -Property @('description','result') -Endpoint {
-                            $t.results.'test-case' | Select-Object description, result | Out-UDGridData
-                        }#>
-                    }
-                }
-            }
-        } 
+}
+
+Function Set-CachedGridData {
+    Param ($xml)
+    Foreach ($t in $xml.'test-results'.'test-suite'.results.'test-suite'){
+        $Guid = (New-Guid).guid
+        @{$t.name= $Guid}
+        $Cache:TestGridData.Add($Guid,$($t.results.'test-case' | Select-Object Description, Result | Out-UDGridData))
     }
 }
 
-Function Get-XMLtoCache {
+Function Set-CachedPages {
     Param (
         $Path, $DirID
     )
@@ -197,13 +130,19 @@ Function Get-XMLtoCache {
             FixtureCount = $xml.'test-results'.total
             }
         ))
-        $Cache:PageContent.Add($($url+$Filename),(New-UDTestObject -XML $xml))
+        $Cache:TestResults.Add($($Url+$Filename),(Set-CachedGridData -xml $xml))
+        $Cache:PageContent.Add($($url+$Filename),(Add-TestStaticCharts -XML $xml))
 
     }
 }
 
+
 Function Initialize-CachePages {
-    Param ($Path, $ParentID)
+    Param (
+        $Path
+        , 
+        $ParentID
+    )
     Push-Location -Path $Path
     $Path = Get-Location
     Pop-Location
@@ -219,7 +158,7 @@ Function Initialize-CachePages {
                 TestCount = (Get-ChildItem -Path $Directory.FullName -Filter "*.xml").count;
             }
         ))
-        Get-XMLtoCache -Path $Directory.FullName -DirID $DirID
+        Set-CachedPages -Path $Directory.FullName -DirID $DirID
         If (Get-ChildItem -path $Directory.FullName -Directory){
             Initialize-CachePages -Path $Directory.FullName -ParentID $DirID.Replace('Directory/','')
         }
@@ -234,7 +173,7 @@ $GetFiles = New-UDEndpoint -Schedule $Schedule -Endpoint {
 
 $Endpoints += $GetFiles
 
-$EndpointInitialization = New-UDEndpointInitialization -Function @('New-UDStaticTable','New-UDTestObject','Initialize-CachePages','Get-XMLtoCache') 
+$EndpointInitialization = New-UDEndpointInitialization -Function @('Add-TestStaticCharts','Initialize-CachePages','Set-CachedPages','Set-CachedGridData') 
 
 $HomePage = . (Join-Path $PSScriptRoot "pages\home.ps1")
 $FilePage = . (Join-Path $PSScriptRoot "pages\FilePage.ps1")
