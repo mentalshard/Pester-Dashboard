@@ -2,7 +2,7 @@ $Endpoints = @()
 $Schedule = New-UDEndpointSchedule -Every 1 -Minute
 
 # Set Configuration and initialize Cache Variables
-$Cache:PesterFolder = '.\pester test dir\'
+$Cache:PesterFolder = '.\Pester Test Dir\'
 $Cache:SiteURL = 'http://localhost:1001'
 $Cache:Filenames = @{}
 $Cache:PageContent = @{}
@@ -202,8 +202,11 @@ Function Get-XMLtoCache {
     }
 }
 
-Function Get-Directories {
+Function Initialize-CachePages {
     Param ($Path, $ParentID)
+    Push-Location -Path $Path
+    $Path = Get-Location
+    Pop-Location
     Foreach ($Directory in  (Get-ChildItem -path $Path -Directory)){
         $DirID = $($Directory | Resolve-Path -Relative).Substring(1).Replace(' ','').Replace('\','-')
         $Cache:Directories.Add($DirID,(
@@ -213,24 +216,25 @@ Function Get-Directories {
                 DirID = $dirID;
                 ParentID = $ParentID;
                 Children = $(Get-ChildItem -Path $Directory.FullName -Directory).count;
-                Tests = If (Get-ChildItem -Path $Directory.FullName -Filter "*.xml"){$true};
+                TestCount = (Get-ChildItem -Path $Directory.FullName -Filter "*.xml").count;
             }
         ))
         Get-XMLtoCache -Path $Directory.FullName -DirID $DirID
         If (Get-ChildItem -path $Directory.FullName -Directory){
-            Get-Directories -Path $Directory.FullName -ParentID $DirID.Replace('Directory/','')
+            Initialize-CachePages -Path $Directory.FullName -ParentID $DirID.Replace('Directory/','')
         }
+        
     }
 }
 
 
 $GetFiles = New-UDEndpoint -Schedule $Schedule -Endpoint {
-    Get-Directories -Path $Cache:PesterFolder -ParentID $Cache:PesterFolder
+    Initialize-CachePages -Path $Cache:PesterFolder -ParentID $Cache:PesterFolder
 }
 
 $Endpoints += $GetFiles
 
-$EndpointInitialization = New-UDEndpointInitialization -Function @('New-UDStaticTable','New-UDTestObject','Get-Directories','Get-XMLtoCache') 
+$EndpointInitialization = New-UDEndpointInitialization -Function @('New-UDStaticTable','New-UDTestObject','Initialize-CachePages','Get-XMLtoCache') 
 
 $HomePage = . (Join-Path $PSScriptRoot "pages\home.ps1")
 $FilePage = . (Join-Path $PSScriptRoot "pages\FilePage.ps1")

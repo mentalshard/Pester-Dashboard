@@ -4,8 +4,12 @@ New-UDPage -Url "/Directory/:Dir/"  -Endpoint {
     $Directory = $Cache:Directories.item($dir)
     New-UDParagraph -Content {"$($Directory.Parent) > $($directory.directory)"}
     New-UDRow {
-        New-UDGrid -Title "Child Directories"  -Headers @('Name', 'Child Directory Count') -Properties @('Link','Children') -Endpoint {
-            $($Cache:Directories.getenumerator()).value.where{$_.parentid -eq $dir} | Select-Object Children, @{Name='Link'; Expression={New-udlink -Text $_.Directory -Url "$Cache:SiteURL/Directory/$($_.DirID)"}}| Out-UDGridData
+        New-UDGrid -Title "Child Directories"  -Headers @('Name', 'Child Directory Count','Test Count') -Properties @('Link','Children','TestCount') -Endpoint {
+            $($Cache:Directories.getenumerator()).value.where{$_.parentid -eq $dir -and $_.TestCount -ne 0} | 
+                Select-Object Children, 
+                    @{Name='Link'; Expression={New-udlink -Text $_.Directory -Url "$Cache:SiteURL/Directory/$($_.DirID)"}}, 
+                    TestCount | 
+                    Out-UDGridData
         }
     }
     If($Cache:Filenames.ContainsKey($dir)){

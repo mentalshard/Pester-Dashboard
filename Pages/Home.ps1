@@ -1,8 +1,8 @@
 New-UDPage -Name 'Home' -Content {
     New-UDParagraph -Text "Top level folder $Cache:PesterFolder"
-    New-UDGrid -Title 'Child Directories' -Headers @('Name', 'Child Directory Count') -Properties @('Link','Children') -Endpoint {
-        $($Cache:Directories.GetEnumerator()).value | Where-object {$_.parent -eq 'Pester test dir'} | ForEach-Object {
-            $_ | Select-Object @{Name='Link'; Expression={New-UDLink -Text $_.Directory -Url "$Cache:SiteURL/Directory/$($_.DirID)"}}, Children
+    New-UDGrid -Title 'Child Directories' -Headers @('Name', 'Child Directory Count','Test Count') -Properties @('Link','Children','TestCount') -Endpoint {
+        $($Cache:Directories.GetEnumerator()).value | Where-object {$_.parent -eq 'Pester test dir' -and $_.TestCount -ne 0} | ForEach-Object {
+            $_ | Select-Object @{Name='Link'; Expression={New-UDLink -Text $_.Directory -Url "$Cache:SiteURL/Directory/$($_.DirID)"}}, Children, TestCount
         } | Out-UDGridData
     }
     If($Cache:Filenames.ContainsKey($Cache:PesterFolder)){
