@@ -1,9 +1,20 @@
 # Directory Page
+
 New-UDPage -Url "/Directory/:Dir/"  -Endpoint {
     Param ($Dir)
-    $Directory = $Cache:Directories.item($dir)
-    New-UDParagraph -Content {"$($Directory.Parent) > $($directory.directory)"}
-    New-UDRow {
+    New-UDCard -Content {
+        [Array]$Breadcrumbs = New-BreadCrumbLinks -directorypath $Dir
+        New-UDLink -Text 'Home' -Url "/Home/" 
+        ' / '
+        Foreach ($Crumb in ($Breadcrumbs | Sort-Object -Descending )){
+            Write-Output $Crumb
+            If ($Breadcrumbs.indexof($Crumb) -ne 0){
+                Write-Output ' /'
+            }
+        }
+    }
+    New-UDLayout -Columns 2 -Content {
+        If ($($Cache:Directories.getenumerator()).value.where{$_.parentid -eq $dir -and $_.TestCount -ne 0} ) {
         New-UDGrid -Title "Child Directories"  -Headers @('Name', 'Child Directory Count','Test Count') -Properties @('Link','Children','TestCount') -Endpoint {
             $($Cache:Directories.getenumerator()).value.where{$_.parentid -eq $dir -and $_.TestCount -ne 0} | 
                 Select-Object Children, 
@@ -11,13 +22,16 @@ New-UDPage -Url "/Directory/:Dir/"  -Endpoint {
                     TestCount | 
                     Out-UDGridData
         }
-    }
-    If($Cache:Filenames.ContainsKey($dir)){
-        New-UDRow {
-            New-UDGrid -Title 'Tests in this folder' -Headers @('Name', 'Successful Tests','Failed Tests', 'Fixture Count') -Properties @('Link','Successful','Failures','FixtureCount') -Endpoint {
-                $Cache:Filenames.Item($dir) | ForEach-Object { $_ | Select-Object Successful, FixtureCount, Failures, @{Name='Link'; Expression={New-UDLink -Text $([System.Web.HttpUtility]::Urldecode($_.Filename)) -Url "$Cache:SiteURL/File/$($_.url)$($_.filename)"}}
-                } | Out-UDGridData
+        } Else {
+            New-UDCard -Title 'Child Directories' -Content {
+                New-UDParagraph -Text "This folder contains no children"
             }
         }
+    If($Cache:Filenames.ContainsKey($dir)){
+        New-UDGrid -Title 'Test files in this folder' -Headers @('Name', 'Successful Tests','Failed Tests', 'Fixture Count') -Properties @('Link','Successful','Failures','FixtureCount') -Endpoint {
+            $Cache:Filenames.Item($dir) | ForEach-Object { $_ | Select-Object Successful, FixtureCount, Failures, @{Name='Link'; Expression={New-UDLink -Text $([System.Web.HttpUtility]::Urldecode($_.Filename)) -Url "$Cache:SiteURL/File/$($_.url)-$($_.filename)"}}
+            } | Out-UDGridData
+        }
     }
+}
 }

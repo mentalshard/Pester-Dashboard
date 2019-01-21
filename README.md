@@ -5,6 +5,12 @@ The goal of this project is the effortless display of Pester test results in a w
 
 My implementation of this vision uses extensive use of the Cache Provider built into PowerShell Universal Dashboard to read and retrieve objects *almost* ready to display. I am using dynamic pages and the relative paths in the directory structure as urls. 
 
+## Screenshots
+Directory Page
+[[https://github.com/Richard-B12/ImageSrc/blob/master/DirectoryPage_Screenshot.PNG?raw=true]|alt=directorypage]
+Test Page
+[[https://github.com/Richard-B12/ImageSrc/blob/master/TestPage_Screenshot.PNG?raw=true]|alt=testpage]
+
 ## Original Requirements
 
 - [x] Automatically update content when new tests are added to the directory
@@ -15,7 +21,7 @@ My implementation of this vision uses extensive use of the Cache Provider built 
 ## Roadmap
 ### Minor Features
 - [ ] Complete building the pester test page (currently only roughed in)
-- [ ] Breadcrumbs for directory and test pages
+- [x] Breadcrumbs for directory and test pages
 - [ ] Update grid content with graphical status elements
 
 ### Major Features

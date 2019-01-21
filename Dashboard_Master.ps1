@@ -11,6 +11,36 @@ $Cache:TestResults = @{}
 $Cache:TestGridData = @{}
 
 # Setup Functions
+Function New-BreadCrumbLinks {
+    param (
+        $DirectoryPath
+        ,
+        [Switch]$File
+        )
+    #Wait-Debugger
+    $output = @()
+    $CurrentPath = $directorypath.Substring(1,$directorypath.length - 1)
+    $DirectoryArray = $CurrentPath -split '-'
+    $Directories = @()
+    $DirectoryArray | foreach-object {
+        If ($currentPath -match '-'){
+            $Directories += $currentPath
+            $CurrentPath = $CurrentPath.Substring(0,$CurrentPath.LastIndexOf('-'))
+        }
+    }
+
+    
+    Foreach ($D in $Directories | Sort-Object -Descending){
+        $LinkedItem = $Cache:Directories.item("-$D")
+        If ($null -eq $LinkedItem -and ($File)){
+            $LinkedItem = $Cache:Filenames.item("-$($d.substring(0,$d.lastindexof('-')))")
+            $output += New-UDLink -Text $([System.Web.HttpUtility]::UrlDecode($LinkedItem.Filename)) -Url "/File/-$($D)"
+        } Else {
+            $output += New-UDLink -Text $LinkedItem.Directory -Url "/directory/$($LinkedItem.DirID)"
+        }
+    }
+    Write-Output $output
+}
 Function Add-TestStaticCharts {
     Param (
         $xml
@@ -99,12 +129,15 @@ Function Add-TestStaticCharts {
     }
 }
 
+
+
+
 Function Set-CachedGridData {
     Param ($xml)
     Foreach ($t in $xml.'test-results'.'test-suite'.results.'test-suite'){
         $Guid = (New-Guid).guid
-        @{$t.name= $Guid}
-        $Cache:TestGridData.Add($Guid,$($t.results.'test-case' | Select-Object Description, Result | Out-UDGridData))
+        @{$t.name = $Guid}
+        $Cache:TestGridData.Add($Guid,$($t.results.'test-case' | Select-Object Description, Result, @{Name='failmessage';Expression={$_.failure.message + ' ' + $_.failure.'stack-trace'}}  | Out-UDGridData))
     }
 }
 
@@ -130,8 +163,8 @@ Function Set-CachedPages {
             FixtureCount = $xml.'test-results'.total
             }
         ))
-        $Cache:TestResults.Add($($Url+$Filename),(Set-CachedGridData -xml $xml))
-        $Cache:PageContent.Add($($url+$Filename),(Add-TestStaticCharts -XML $xml))
+        $Cache:TestResults.Add($($Url+'-'+$Filename),(Set-CachedGridData -xml $xml))
+        $Cache:PageContent.Add($($url+'-'+$Filename),(Add-TestStaticCharts -XML $xml))
 
     }
 }
@@ -171,15 +204,61 @@ $GetFiles = New-UDEndpoint -Schedule $Schedule -Endpoint {
     Initialize-CachePages -Path $Cache:PesterFolder -ParentID $Cache:PesterFolder
 }
 
+$Theme = New-UDTheme -Name "Standard" -Definition @{
+    UDDashboard = @{
+        BackgroundColor = "#efefef"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    UDInput = @{
+        BackgroundColor = "rgb(255,255,255)"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    UDNavBar = @{
+        BackgroundColor = "#00bcd4"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    UDFooter = @{
+        BackgroundColor = "#62efff"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    UDCard = @{
+        BackgroundColor = "#62efff"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    UDChart = @{
+       # BackgroundColor = "#ffad42"
+       # FontColor = "rgb(0, 0, 0)"
+    }
+    UDGrid = @{
+        BackgroundColor = "rgb(255,255,255)"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    <#
+    UDCounter = @{
+        BackgroundColor = "rgb(255,255,255)"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    UDMonitor = @{
+        BackgroundColor = "rgb(255,255,255)"
+        FontColor = "rgb(0, 0, 0)"
+    }
+    
+    UDTable = @{
+        BackgroundColor = "rgb(255,255,255)"
+        FontColor = "rgb(0, 0, 0)"
+    }#>
+    
+} -Parent "default"
+
 $Endpoints += $GetFiles
 
-$EndpointInitialization = New-UDEndpointInitialization -Function @('Add-TestStaticCharts','Initialize-CachePages','Set-CachedPages','Set-CachedGridData') 
+$EndpointInitialization = New-UDEndpointInitialization -Function @('Add-TestStaticCharts','Initialize-CachePages','Set-CachedPages','Set-CachedGridData','New-BreadCrumbLinks') 
 
 $HomePage = . (Join-Path $PSScriptRoot "pages\home.ps1")
 $FilePage = . (Join-Path $PSScriptRoot "pages\FilePage.ps1")
 $DirectoryPage = . (Join-Path $PSScriptRoot "pages\DirectoryPage.ps1")
 
 $Pages = @($HomePage, $DirectoryPage, $FilePage)
-$Dashboard = New-UDDashboard -Title "Pester Test $path" -Pages $Pages -EndpointInitialization $EndpointInitialization
+$Dashboard = New-UDDashboard -Title "Pester Test $path" -Pages $Pages -EndpointInitialization $EndpointInitialization -Theme $Theme
 Get-UDdashboard -Name PesterDashboard | Stop-UDDashboard  
 Start-UDDashboard -Port 1001 -Dashboard $Dashboard -Name PesterDashboard -AutoReload -Endpoint $Endpoints
