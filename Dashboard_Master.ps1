@@ -176,6 +176,9 @@ Function Initialize-CachePages {
         , 
         $ParentID
     )
+    If ($Path -eq $Cache:PesterFolder){
+        Set-location $Cache:PesterFolder
+    }
     Push-Location -Path $Path
     $Path = Get-Location
     Pop-Location

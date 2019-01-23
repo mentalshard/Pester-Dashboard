@@ -3,7 +3,7 @@ New-UDPage -Name 'Home' -Content {
         New-UDLink -Text 'Home' -Url "/Home/" 
     }
     New-UDGrid -Title 'Child Directories' -Headers @('Name', 'Child Directory Count','Test Count') -Properties @('Link','Children','TestCount') -Endpoint {
-        $($Cache:Directories.GetEnumerator()).value | Where-object {$_.parent -eq 'Pester test dir' -and $_.TestCount -ne 0} | ForEach-Object {
+        $($Cache:Directories.GetEnumerator()).value | Where-object {$_.parent -eq (Get-Item -Path $Cache:PesterFolder).Name -and $_.TestCount -ne 0} | ForEach-Object {
             $_ | Select-Object @{Name='Link'; Expression={New-UDLink -Text $_.Directory -Url "$Cache:SiteURL/Directory/$($_.DirID)"}}, Children, TestCount
         } | Out-UDGridData
     }
