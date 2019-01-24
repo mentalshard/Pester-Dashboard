@@ -19,22 +19,23 @@ Function New-BreadCrumbLinks {
         )
     #Wait-Debugger
     $output = @()
-    $CurrentPath = $directorypath.Substring(1,$directorypath.length - 1)
-    $DirectoryArray = $CurrentPath -split '-'
+    $CurrentPath = $directorypath #.Substring(2,$directorypath.length - 2)
+    $DirectoryArray = $CurrentPath -split '--'
     $Directories = @()
-    $DirectoryArray | foreach-object {
-        If ($currentPath -match '-'){
+    $DirectoryArray[1..$DirectoryArray.length] | foreach-object {
+        If ($currentPath -match '--'){
             $Directories += $currentPath
-            $CurrentPath = $CurrentPath.Substring(0,$CurrentPath.LastIndexOf('-'))
+            $CurrentPath = $CurrentPath.Substring(0,$CurrentPath.LastIndexOf('--'))
         }
     }
 
     
     Foreach ($D in $Directories | Sort-Object -Descending){
-        $LinkedItem = $Cache:Directories.item("-$D")
+        $LinkedItem = $Cache:Directories.item($D)
         If ($null -eq $LinkedItem -and ($File)){
-            $LinkedItem = $Cache:Filenames.item("-$($d.substring(0,$d.lastindexof('-')))")
-            $output += New-UDLink -Text $([System.Web.HttpUtility]::UrlDecode($LinkedItem.Filename)) -Url "/File/-$($D)"
+            $Filename = $directorypath.Substring($directorypath.LastIndexOf('--'),$directorypath.Length -$directorypath.LastIndexOf('--'))
+            $LinkedItem = $Cache:Filenames.item($d.substring(0,$d.lastindexof('--'))) | Where-Object {$_.Filename -eq $Filename.replace('--','')}
+            $output += New-UDLink -Text $([System.Web.HttpUtility]::UrlDecode($LinkedItem.Filename)) -Url "/File/$($D)"
         } Else {
             $output += New-UDLink -Text $LinkedItem.Directory -Url "/directory/$($LinkedItem.DirID)"
         }
@@ -145,8 +146,30 @@ Function Set-CachedPages {
     Param (
         $Path, $DirID
     )
+    #Wait-Debugger
     $XMLFiles = Get-ChildItem -Path $path -Filter '*.xml'
+    $XMLContent = @()
     Foreach ($XMLFile in $XMLFiles){
+       [xml]$xml = Get-Content -Path $XMLFile.FullName
+       $ID = (New-Guid).Guid
+       $Directory = [System.Web.HttpUtility]::UrlEncode($xmlfile.Directory.Name)
+       $Filename = [System.Web.HttpUtility]::UrlEncode($($XMLFile.Name.Replace('.xml','')))
+       $Url = $DirID
+
+       $XMLContent += New-Object psobject -Property @{
+           FileID = $ID
+           URL = $Url
+           Directory = $Directory
+           Filename = $Filename
+           Successful = $($xml.'test-results'.total - $xml.'test-results'.failures)
+           Failures = $xml.'test-results'.failures
+           FixtureCount = $xml.'test-results'.total
+       }
+       $Cache:TestResults.Add($($Url+'--'+$Filename),(Set-CachedGridData -xml $xml))
+       $Cache:PageContent.Add($($url+'--'+$Filename),(Add-TestStaticCharts -XML $xml))
+   }
+   $Cache:Filenames.Add($url,$XMLContent)
+    <#Foreach ($XMLFile in $XMLFiles){
         [xml]$xml = Get-Content -Path $XMLFile.FullName
         $ID = (New-Guid).Guid
         $Directory = [System.Web.HttpUtility]::UrlEncode($xmlfile.Directory.Name)
@@ -163,10 +186,10 @@ Function Set-CachedPages {
             FixtureCount = $xml.'test-results'.total
             }
         ))
-        $Cache:TestResults.Add($($Url+'-'+$Filename),(Set-CachedGridData -xml $xml))
-        $Cache:PageContent.Add($($url+'-'+$Filename),(Add-TestStaticCharts -XML $xml))
+        $Cache:TestResults.Add($($Url+'--'+$Filename),(Set-CachedGridData -xml $xml))
+        $Cache:PageContent.Add($($url+'--'+$Filename),(Add-TestStaticCharts -XML $xml))
 
-    }
+    }#>
 }
 
 
@@ -183,19 +206,19 @@ Function Initialize-CachePages {
     $Path = Get-Location
     Pop-Location
     Foreach ($Directory in  (Get-ChildItem -path $Path -Directory)){
-        $DirID = $($Directory | Resolve-Path -Relative).Substring(1).Replace(' ','').Replace('\','-')
+        $DirID = $($Directory | Resolve-Path -Relative).Substring(1).Replace(' ','').Replace('\','--')
         $Cache:Directories.Add($DirID,(
             New-Object psobject -Property @{
                 Directory = $Directory.name;
                 Parent = $Directory.Parent.Name;
-                DirID = $dirID;
+                DirID = $DirID;
                 ParentID = $ParentID;
                 Children = $(Get-ChildItem -Path $Directory.FullName -Directory).count;
                 TestCount = (Get-ChildItem -Path $Directory.FullName -Filter "*.xml").count;
             }
         ))
         Set-CachedPages -Path $Directory.FullName -DirID $DirID
-        If (Get-ChildItem -path $Directory.FullName -Directory){
+        If (Get-ChildItem -Path $Directory.FullName -Directory){
             Initialize-CachePages -Path $Directory.FullName -ParentID $DirID.Replace('Directory/','')
         }
         
