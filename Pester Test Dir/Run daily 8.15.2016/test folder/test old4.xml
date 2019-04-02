@@ -23,7 +23,7 @@ But was:  {309}</message>
           </test-case>
         </results>
       </test-suite>
-      <test-suite type="TestFixture" name="Tests with Contexts" executed="True" result="Failure" success="False" time="0.2794" asserts="0" description="Tests with Contexts">
+      <test-suite type="TestFixture" name="Tests with Contextz" executed="True" result="Failure" success="False" time="0.2794" asserts="0" description="Tests with Contexts">
         <results>
           <test-case description="The current day of the week is Sunday" name="Tests with Contexts.The current day of the week is Sunday" time="0.0294" asserts="0" success="True" result="Success" executed="True" />
           <test-case description="This test always fails" name="Tests with Contexts.This test always fails" time="0.0342" asserts="0" success="False" result="Failure" executed="True">

@@ -1,9 +1,10 @@
 # Directory Page
 
 New-UDPage -Url "/Directory/:Dir/" -Endpoint {
-    Param ($Dir)
+    Param ($Dir) 
+    $time = Measure-Command {
     New-UDCard -Content {
-        New-BreadCrumbLinks -directorypath $Dir
+        New-PDBreadCrumbLinks -directorypath $Dir
     }
     New-UDLayout -Columns 2 -Content {
         If ($($Cache:Directories.getenumerator()).value.where{$_.parentid -eq $dir -and $_.TestCount -ne 0} ) {
@@ -26,5 +27,10 @@ New-UDPage -Url "/Directory/:Dir/" -Endpoint {
                 } | Out-UDGridData
             }
         }
+    }
+    
+    }
+    new-udcard -Content {
+        $time.totalseconds
     }
 }

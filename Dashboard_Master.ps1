@@ -7,8 +7,6 @@ $Cache:SiteURL = 'http://localhost:1001'
 $Cache:Filenames = @{}
 $Cache:PageContent = @{}
 $Cache:Directories = @{}
-$Cache:TestResults = @{}
-$Cache:TestGridData = @{}
 $Cache:PageData = @{}
 # Setup Functions
 
@@ -152,7 +150,7 @@ Function New-PDCollapsibleGrid {
     }
 }
 
-Function New-BreadCrumbLinks {
+Function New-PDBreadCrumbLinks {
     param (
         $DirectoryPath
         ,
@@ -186,218 +184,7 @@ Function New-BreadCrumbLinks {
     }
 }
 
-Function Add-TestStaticCharts {
-    Param (
-        $xml
-    )
-
-    New-UDRow {
-        # Fixture summary (pass/fail/inconclusive) (Doughnut)
-        New-UDColumn {
-            
-            New-UDChart -Type Doughnut -Title 'Fixture Summary' -Endpoint {
-                $xml.'test-results'.'test-suite'.results.'test-suite' | ForEach-Object {
-                    If ($_.Result -eq 'Failure'){
-                        New-Object psobject -Property @{
-                            Type = 'Fail'
-                            Value = 1   
-                        }
-                    }
-                    ElseIf ($_.Result -eq 'Inconclusive'){
-                        New-Object psobject -Property @{
-                            Type = 'Inconclusive'
-                            Value = 1   
-                        }
-                    }
-                    ElseIf ($_.Result -eq 'Success'){
-                        New-Object psobject -Property @{
-                            Type = 'Pass'
-                            Value = 1   
-                        }
-                    }
-                } | Group-Object -property 'Type' | Sort-Object | Out-UDChartData -DataProperty "Count" -LabelProperty "Name" -BackgroundColor @('#D62728','#2Ca02C') -HoverBackgroundColor @('#ED4730','#adc896') 
-                
-                
-            } -Options @{
-                <#layout = @{
-                    padding = @{
-                        left = 0
-                    }
-                }#>
-                #'animation.animateScale' = $true;
-                legend = @{
-                    display = $false
-                    #position = 'right'
-                }
-                tooltips = @{
-                    bodyFontColor = '#000'
-                    backgroundColor = 'rgb(0,0,0,0.2)'
-                    #displayColors = $false
-                } 
-            }
-        }
-        # Test Summary (Doughnut)
-        New-UDColumn {
-            New-UDChart -Type Doughnut -Title 'Test Summary' -Endpoint {
-                $xml.'test-results'.'test-suite'.results.'test-suite'.results.'test-case' | ForEach-Object {
-                    If ($_.Result -eq 'Failure'){
-                        New-Object psobject -Property @{
-                            Type = 'Fail'
-                            Value = 1   
-                        }
-                    }
-                    ElseIf ($_.Result -eq 'Inconclusive'){
-                        New-Object psobject -Property @{
-                            Type = 'Inconclusive'
-                            Value = 1   
-                        }
-                    }
-                    ElseIf ($_.Result -eq 'Success'){
-                        New-Object psobject -Property @{
-                            Type = 'Pass'
-                            Value = 1   
-                        }
-                    }
-                } | Group-Object -property 'Type' | Sort-Object | Out-UDChartData -DataProperty "Count" -LabelProperty "Name" -BackgroundColor @('#D62728','#2Ca02C') -HoverBackgroundColor @('#ED4730','#adc896') 
-                
-                
-            } -Options @{
-                legend = @{
-                    display = $false
-                    #position = 'right'
-                }
-                tooltips = @{
-                    bodyFontColor = '#000'
-                    backgroundColor = 'rgb(0,0,0,0.2)'
-                    #displayColors = $false
-                } 
-            }
-        }
-        Wait-Debugger
-        $Cache:TestEnvironmentData.Add()
-        New-UDColumn {
-            New-UDTable -Title 'Environment Information' -Headers @(" "," ") -Endpoint { #need to turn endpoint into content
-                @{
-                'User' = $xml.'test-results'.Environment.User
-                'Machine-Name' = $xml.'test-results'.Environment.'machine-name'
-                'Cwd' = $xml.'test-results'.Environment.cwd;
-                'User-Domain' = $xml.'test-results'.Environment.'user-domain'
-                'Platform' = $xml.'test-results'.Environment.platform
-                'nunit-version' = $xml.'test-results'.Environment.'nunit-version'
-                'OS-version' = $xml.'test-results'.Environment.'os-version'
-                'clr-version' = $xml.'test-results'.Environment.'clr-version'
-                }.GetEnumerator() | Out-UDTableData -Property @("Name","Value")
-            }
-            
-        }
-    }
-}
-#>
-
-
-
-Function Set-CachedGridData {
-    Param ($xml)
-    Foreach ($t in $xml.'test-results'.'test-suite'.results.'test-suite'){
-        #Wait-Debugger
-        $Guid = (New-Guid).guid
-        If (!($Fail = ($t.results.'test-case' | Where-object {$_.success -eq 'false'} | Measure-object).count)){
-            $Fail = 0
-        }
-        If (!($Total = $t.results.'test-case'.count)){
-            $Total = 1
-        }
-
-        @{$t.name = (
-            New-Object psobject -Property @{
-                Guid = $Guid;
-                Time = $t.Time;
-                FailPercent = [Math]::Round($Fail / $Total * 100);
-            }
-        )}
-        $Cache:TestGridData.Add($Guid,$($t.results.'test-case' | Select-Object Description, Result, @{Name='failmessage';Expression={$_.failure.message + ' ' + $_.failure.'stack-trace'}}  | Out-UDGridData;))
-    }
-    
-}
-
-
-
-Function Set-CachedPages {
-    Param (
-        $Path, $DirID
-    )
-    
-    $XMLFiles = Get-ChildItem -Path $path -Filter '*.xml'
-    $XMLContent = @()
-    Foreach ($XMLFile in $XMLFiles){
-        [xml]$xml = Get-Content -Path $XMLFile.FullName
-        $ID = (New-Guid).Guid
-        $Directory = [System.Web.HttpUtility]::UrlEncode($xmlfile.Directory.Name)
-        $Filename = [System.Web.HttpUtility]::UrlEncode($($XMLFile.Name.Replace('.xml','')))
-        $Url = $DirID
-
-        $XMLContent += New-Object psobject -Property @{
-            FileID = $ID
-            URL = $Url
-            Directory = $Directory
-            Filename = $Filename
-            Successful = $($xml.'test-results'.total - $xml.'test-results'.failures)
-            Failures = $xml.'test-results'.failures
-            FixtureCount = $xml.'test-results'.total
-        }
-        $Cache:PageContent.Add(
-            $($url+'--'+$Filename),(
-                $(
-                    Add-TestStaticCharts -XML $xml
-                    New-UDRow {
-                        Foreach ($test in (Set-CachedGridData -xml $xml)){
-                            New-UDCard -Content {
-                                New-UDCollapsible -Items {
-                                    New-PDCollapsibleGrid -Title $($test.keys)  -xml $test -Content {
-                                        New-UDGrid -Headers @('Test Name','Status','Error Message') -Properties @('description','result','failmessage') -Endpoint {
-                                            [string]$ID = $test.values.guid
-                                            $Cache:TestGridData.Item($ID)
-                                        }
-                                    }
-                                }
-                            }
-                        } 
-                    }
-                )
-            )
-        )
-    }
-    $Cache:Filenames.Add($url,$XMLContent)
-}
-
-Function Set-ChartData {
-    Param ($xml,$ID)
-    $Cache:ChartData.Add($ID,$(
-        $xml.'test-results'.'test-suite'.results.'test-suite'.results.'test-case' | ForEach-Object {
-            If ($_.Result -eq 'Failure'){
-                New-Object psobject -Property @{
-                    Type = 'Fail'
-                    Value = 1   
-                }
-            }
-            ElseIf ($_.Result -eq 'Inconclusive'){
-                New-Object psobject -Property @{
-                    Type = 'Inconclusive'
-                    Value = 1   
-                }
-            }
-            ElseIf ($_.Result -eq 'Success'){
-                New-Object psobject -Property @{
-                    Type = 'Pass'
-                    Value = 1   
-                }
-            }
-        } | Group-Object -property 'Type' | Sort-Object | Out-UDChartData -DataProperty "Count" -LabelProperty "Name" -BackgroundColor @('#D62728','#2Ca02C') -HoverBackgroundColor @('#ED4730','#adc896') 
-    ))
-}
-
-
-Function Set-CachedPages2 {
+Function Set-PDCachedPages {
     Param (
         $Path, $DirID
     )
@@ -406,7 +193,7 @@ Function Set-CachedPages2 {
     $XMLContent = @()
     Foreach ($XMLFile in $XMLFiles){
 
-        $ID = (New-Guid).Guid
+        #$ID = (New-Guid).Guid
         $Url = $DirID
         $Directory = [System.Web.HttpUtility]::UrlEncode($xmlfile.Directory.Name)
         $Filename = [System.Web.HttpUtility]::UrlEncode($($XMLFile.Name.Replace('.xml','')))
@@ -418,7 +205,7 @@ Function Set-CachedPages2 {
         [xml]$xml = Get-Content -Path $XMLFile.FullName
 
         $XMLContent += New-Object psobject -Property @{
-            FileID = $ID
+            FileID = (New-Guid).Guid
             URL = $Url
             Directory = $Directory
             Filename = $Filename
@@ -558,12 +345,12 @@ Function Set-CachedPages2 {
                         }
                     }
                     New-UDRow {
-                        Foreach ($test in $PageData.GridData){
+                        Foreach ($Test in $PageData.GridData){
                             New-UDCard -Content {
                                 New-UDCollapsible -Popout -Items {
-                                    New-PDCollapsibleGrid -Title $($test.title)  -Time $test.time -FailurePercent $test.FailurePercent -Content {
+                                    New-PDCollapsibleGrid -Title $($Test.Title)  -Time $Test.Time -FailurePercent $Test.FailurePercent -Content {
                                         New-UDGrid -Headers @('Test Name','Status','Error Message') -Properties @('description','result','failmessage') -Endpoint {
-                                            $test.data
+                                            $Test.Data
                                             #$Cache:PageData.Item($url).GridData
                                         }
                                     }
@@ -579,7 +366,7 @@ Function Set-CachedPages2 {
 }
 
 
-Function Initialize-CachePages {
+Function Initialize-PDCachePages {
     Param (
         $Path
         , 
@@ -603,9 +390,9 @@ Function Initialize-CachePages {
                 TestCount = (Get-ChildItem -Path $Directory.FullName -Filter "*.xml").count;
             }
         ))
-        Set-CachedPages2 -Path $Directory.FullName -DirID $DirID
+        Set-PDCachedPages -Path $Directory.FullName -DirID $DirID
         If (Get-ChildItem -Path $Directory.FullName -Directory){
-            Initialize-CachePages -Path $Directory.FullName -ParentID $DirID.Replace('Directory/','')
+            Initialize-PDCachePages -Path $Directory.FullName -ParentID $DirID.Replace('Directory/','')
         }
         
     }
@@ -614,7 +401,7 @@ Function Initialize-CachePages {
 
 
 $GetFiles = New-UDEndpoint -Schedule $Schedule -Endpoint {
-    Initialize-CachePages -Path $Cache:PesterFolder -ParentID $Cache:PesterFolder
+    Initialize-PDCachePages -Path $Cache:PesterFolder -ParentID $Cache:PesterFolder
 }
 
 $Theme = New-UDTheme -Name "Standard" -Definition @{
@@ -633,14 +420,6 @@ $Theme = New-UDTheme -Name "Standard" -Definition @{
     UDFooter = @{
         BackgroundColor = "#62efff"
         FontColor = "rgb(0, 0, 0)"
-    }
-    UDCard = @{
-        #BackgroundColor = "#62efff"
-        #FontColor = "rgb(0, 0, 0)"
-    }
-    UDChart = @{
-       # BackgroundColor = "#ffad42"
-       # FontColor = "rgb(0, 0, 0)"
     }
     UDGrid = @{
         BackgroundColor = "rgb(255,255,255)"
@@ -663,27 +442,11 @@ $Theme = New-UDTheme -Name "Standard" -Definition @{
         'font-size' = '.8em'
     }
     
-    
-    <#
-    UDCounter = @{
-        BackgroundColor = "rgb(255,255,255)"
-        FontColor = "rgb(0, 0, 0)"
-    }
-    UDMonitor = @{
-        BackgroundColor = "rgb(255,255,255)"
-        FontColor = "rgb(0, 0, 0)"
-    }
-    
-    UDTable = @{
-        BackgroundColor = "rgb(255,255,255)"
-        FontColor = "rgb(0, 0, 0)"
-    }#>
-    
 } -Parent "default"
 
 $Endpoints += $GetFiles
 
-$EndpointInitialization = New-UDEndpointInitialization -Function 'Add-TestStaticCharts','Initialize-CachePages','Set-CachedPages','Set-CachedGridData','New-BreadCrumbLinks','new-PDCollapsibleGrid','New-PDProgress' , 'set-CachedPages2'
+$EndpointInitialization = New-UDEndpointInitialization -Function 'Initialize-PDCachePages','Set-PDCachedPages','New-PDBreadCrumbLinks','new-PDCollapsibleGrid','New-PDProgress'
 
 $HomePage = . (Join-Path $PSScriptRoot "pages\home.ps1")
 $FilePage = . (Join-Path $PSScriptRoot "pages\FilePage.ps1")
