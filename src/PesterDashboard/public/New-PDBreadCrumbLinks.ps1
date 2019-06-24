@@ -1,7 +1,10 @@
 Function New-PDBreadCrumbLinks {
+    [cmdletbinding()]
     param (
+        [Parameter(Mandatory=$true)]
         $DirectoryPath
         ,
+        [Parameter(Mandatory=$false )]
         [Switch]$File
         )
     $Directories = @()

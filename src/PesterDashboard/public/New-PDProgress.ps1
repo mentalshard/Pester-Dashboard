@@ -1,7 +1,10 @@
 Function New-PDProgress {
-    param(
+    [cmdletbinding()]
+    Param (
+        [Parameter(Mandatory=$True)]
         [string]$Percent
         ,
+        [Parameter(Mandatory=$false)]
         [string]$Label
     )
 

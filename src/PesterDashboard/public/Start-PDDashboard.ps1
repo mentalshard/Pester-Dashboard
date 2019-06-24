@@ -1,12 +1,17 @@
 Function Start-PDDashboard {
+    [cmdletbinding()]
     Param (
-    [string]$PesterOutputDir = '.\Pester Test Dir\'
-    ,
-    [string]$Port = '1001'
-    ,
-    [string]$SiteURL = 'http://localhost:1001'
-    ,
-    [int]$Timeout
+        [Parameter()]
+        [string]$PesterOutputDir = '.\Pester Test Dir\'
+        ,
+        [Parameter()]
+        [string]$Port = '1001'
+        ,
+        [Parameter()]
+        [string]$SiteURL = 'http://localhost:1001'
+        ,
+        [Parameter()]
+        [int]$Timeout
 )
 
 $Endpoints = @()

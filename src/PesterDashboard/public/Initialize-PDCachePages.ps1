@@ -1,8 +1,11 @@
-Function Initialize-PDCachePages {
+Function Initialize-PDCachePages {    
+    [cmdletbinding()]
     Param (
-        $Path
-        , 
-        $ParentID
+        [Parameter(Mandatory=$true)]
+        [string]$Path
+        ,
+        [Parameter(Mandatory=$true)]
+        [string]$ParentID
     )
     If ($Path -eq $Cache:PesterFolder){
         Set-location $Cache:PesterFolder

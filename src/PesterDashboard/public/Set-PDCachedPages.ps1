@@ -1,12 +1,17 @@
+
 Function Set-PDCachedPages {
+    [cmdletbinding()]
     Param (
-        $Path, $DirID
+        [Parameter(Mandatory=$True)]
+        [string]$Path
+        ,
+        [Parameter(Mandatory=$True)]
+        [string]$DirID
     )
-    
+
     $XMLFiles = Get-ChildItem -Path $path -Filter '*.xml'
     $XMLContent = @()
     Foreach ($XMLFile in $XMLFiles){
-
         #$ID = (New-Guid).Guid
         $Url = $DirID
         $Directory = [System.Web.HttpUtility]::UrlEncode($xmlfile.Directory.Name)
@@ -15,7 +20,7 @@ Function Set-PDCachedPages {
         If ($Cache:PageData.ContainsKey($url) -eq $True){
             Continue
         }
-        
+
         [xml]$xml = Get-Content -Path $XMLFile.FullName
 
         $XMLContent += New-Object psobject -Property @{
@@ -27,7 +32,7 @@ Function Set-PDCachedPages {
             Failures = $xml.'test-results'.failures
             FixtureCount = $xml.'test-results'.total
         }
-        
+
         $PageData = New-Object psobject -Property @{
             ChartData = New-Object psobject -Property @{
                 Fixture = $(

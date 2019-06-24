@@ -3,24 +3,36 @@ Function New-PDCollapsibleGrid {
     [CmdletBinding(DefaultParameterSetName = "content")]
     param(
         [Parameter()]
-        [String]$Id = (New-Guid),
+        [String]$Id = (New-Guid)
+        ,
         [Parameter()]
-		[String]$Title,
+        [String]$Title
+        ,
 		[Parameter(ParameterSetName = "content")]
-        [ScriptBlock]$Content,
+        [ScriptBlock]$Content
+        ,
         [Parameter(ParameterSetName = "endpoint")]
-        [ScriptBlock]$Endpoint,
+        [ScriptBlock]$Endpoint
+        ,
         [Parameter(ParameterSetName = "endpoint")]
-        [Switch]$AutoRefresh,
+        [Switch]$AutoRefresh
+        ,
         [Parameter(ParameterSetName = "endpoint")]
-		[int]$RefreshInterval = 5,
+        [int]$RefreshInterval = 5
+        ,
 		[Parameter()]
-        [Switch]$Active,
+        [Switch]$Active
+        ,
         [Parameter()]
-        [UniversalDashboard.Models.DashboardColor]$BackgroundColor = 'White',
+        [UniversalDashboard.Models.DashboardColor]$BackgroundColor = 'White'
+        ,
         [Parameter()]
-        [UniversalDashboard.Models.DashboardColor]$FontColor = 'Black',
-        $Time,
+        [UniversalDashboard.Models.DashboardColor]$FontColor = 'Black'
+        ,
+        [Parameter()]
+        $Time
+        ,
+        [Parameter()]
         $FailurePercent
     )
 
