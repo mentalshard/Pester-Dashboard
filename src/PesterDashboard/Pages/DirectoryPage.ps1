@@ -20,7 +20,6 @@ New-UDPage -Url "/Directory/:Dir/" -Endpoint {
                 New-UDParagraph -Text "This folder contains no children"
             }
         }
-        #Wait-Debugger
         If($Cache:Filenames.ContainsKey($dir)){
             New-UDGrid -Title 'Test files in this folder' -Headers @('Name', 'Successful Tests','Failed Tests', 'Fixture Count') -Properties @('Link','Successful','Failures','FixtureCount') -Endpoint {
                 $Cache:Filenames.Item($dir) | ForEach-Object { $_ | Select-Object Successful, FixtureCount, Failures, @{Name='Link'; Expression={New-UDLink -Text $([System.Web.HttpUtility]::Urldecode($_.Filename)) -Url "$Cache:SiteURL/File/$($_.url)--$($_.filename)"}}

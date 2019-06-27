@@ -12,14 +12,13 @@ Function Set-PDCachedPages {
     $XMLFiles = Get-ChildItem -Path $path -Filter '*.xml'
     $XMLContent = @()
     Foreach ($XMLFile in $XMLFiles){
-        #$ID = (New-Guid).Guid
         $Url = $DirID
         $Directory = [System.Web.HttpUtility]::UrlEncode($xmlfile.Directory.Name)
         $Filename = [System.Web.HttpUtility]::UrlEncode($($XMLFile.Name.Replace('.xml','')))
 
-        If ($Cache:PageData.ContainsKey($url) -eq $True){
+        <#If ($Cache:PageData.ContainsKey($url) -eq $True){
             Continue
-        }
+        }#>
 
         [xml]$xml = Get-Content -Path $XMLFile.FullName
 
